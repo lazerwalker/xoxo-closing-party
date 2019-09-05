@@ -2,13 +2,53 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 const fetch = require("node-fetch");
 
-const fetchUser = async function (id) {
-  const userRequest = await fetch(
-    `https://slack.com/api/users.list?token=${process.env.SlackAccessToken}`
-  ).then(response => response.json());
-  const users = userRequest.members || [];
+const fetchUsers = async (existing, cursor) => {
+  let users = existing || []
 
-  return users.find(u => u.id === id);
+  let url = `https://slack.com/api/users.list?token=${process.env.SlackAccessToken}`
+  if (cursor) {
+    url += `&cursor=${cursor}`
+  }
+
+  const response = await fetch(url).then(response => response.json())
+
+  users = users.concat(response.members || [])
+
+  if (response.response_metadata && response.response_metadata.next_cursor) {
+    return await fetchUsers(users, response.response_metadata.next_cursor)
+  } else {
+    return users
+  }
+}
+
+const fetchEmojis = async () => {
+  return await fetch(
+      `https://slack.com/api/emoji.list?token=${process.env.SlackAccessToken}`
+    ).then(response => response.json())
+    .then(response => response.emoji || [])
+}
+
+const replaceEmoji = (message) => {
+  const standardEmojiMap = require('./emoji')
+  return message.replace(/\:(.*?)\:/g, (original, name) => {
+    if (standardEmojiMap[name]) {
+      return String.fromCodePoint(standardEmojiMap[name])
+    } else {
+      return original
+    }
+  })
+}
+
+const replaceCustomEmoji = (message, emojiMap) => {
+  return message.replace(/\:(.*?)\:/g, (original, name) => {
+    const url = emojiMap[name]
+    if (url) {
+      return `<img class='slack-emoji' src="${url}"/>`
+    } else {
+      return original
+    }
+  })
+
 }
 
 module.exports = async function (context, req) {
@@ -35,21 +75,45 @@ module.exports = async function (context, req) {
     event.type === "message" &&
     event.subtype !== "message_deleted"
   ) {
-
-
     let response = {
       timestamp: event.ts,
       user: event.user
     };
 
-    const user = await fetchUser(event.user)
+    let users = []
+    let customEmoji = []
+
+    const data = context.bindings.cachedData[0]
+
+    if (data &&
+      data.customEmoji &&
+      data.users &&
+      data.timestamp &&
+      new Date() - new Date(data.timestamp) <= 1000 * 60 /* 1 minute */ ) {
+      users = data.users
+      customEmoji = data.customEmoji
+    } else {
+      users = await fetchUsers()
+      customEmoji = await fetchEmojis()
+      context.bindings.newData = {
+        timestamp: (new Date()).toISOString(),
+        id: "1", // loool
+        users,
+        customEmoji
+      }
+    }
+
+    const user = users.find(u => u.id === event.user);
     if (user) {
       response.username = user.name;
-      response.name = user.real_name;
+      response.user = user.real_name;
     }
 
     if (event.text !== "") {
-      response.text = event.text;
+      let text = event.text
+      text = replaceEmoji(text)
+      text = replaceCustomEmoji(text, customEmoji)
+      response.text = text
     }
 
     if (event.attachments && event.attachments[0]) {

@@ -1,7 +1,6 @@
 {
   "disabled": false,
-  "bindings": [
-    {
+  "bindings": [{
       "authLevel": "anonymous",
       "type": "httpTrigger",
       "direction": "in",
@@ -19,6 +18,24 @@
       "type": "signalR",
       "name": "$return",
       "hubName": "chat",
+      "direction": "out"
+    },
+    {
+      "name": "cachedData",
+      "type": "cosmosDB",
+      "databaseName": "XoxoClosingParty",
+      "collectionName": "Items",
+      "createIfNotExists": true,
+      "connectionStringSetting": "CosmosDB",
+      "direction": "in"
+    },
+    {
+      "name": "newData",
+      "type": "cosmosDB",
+      "databaseName": "XoxoClosingParty",
+      "collectionName": "Items",
+      "createIfNotExists": true,
+      "connectionStringSetting": "CosmosDB",
       "direction": "out"
     }
   ]

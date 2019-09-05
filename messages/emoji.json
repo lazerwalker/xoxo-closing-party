@@ -1,14 +1,4 @@
-/**
- Regenerate this by running:
- curl -s https://raw.githubusercontent.com/iamcal/emoji-data/master/emoji.json | \
-  npx ramda-cli \
-    'reject (.unified.includes("-"))' \
-    'chain (emoji) -> emoji.short_names.map -> {...emoji, short_name: it}' \
-    'sort-by (.short_name)' \
-    'index-by (.short_name)' 'map -> "0x#{it.unified}"' > emoji.json
- */
-
-module.exports = {
+{
   "100": "0x1F4AF",
   "1234": "0x1F522",
   "+1": "0x1F44D",
