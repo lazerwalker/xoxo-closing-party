@@ -12,7 +12,15 @@ const fetchUsers = async (existing, cursor) => {
 
   const response = await fetch(url).then(response => response.json())
 
-  users = users.concat(response.members || [])
+  const newUsers = (response.members || []).map(u => {
+    return {
+      id: u.id,
+      name: u.name,
+      real_name: u.real_name
+    }
+  })
+
+  users = users.concat(newUsers)
 
   if (response.response_metadata && response.response_metadata.next_cursor) {
     return await fetchUsers(users, response.response_metadata.next_cursor)
