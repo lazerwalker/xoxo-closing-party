@@ -87,6 +87,12 @@ module.exports = async function(context, req) {
   }
 
   const event = payload.event;
+
+  // Slack sends us events for EVERY public channel, as well as any type of event that can happen within a channel
+  // Let's filter by just the channel we want, and only on new messages!
+  //
+  // (Slack's API includes "this message was deleted" and "this user joined the channel" as {type: "event"},
+  // so we need to manually blacklist some event subtypes)
   if (
     event &&
     event.channel === process.env.SlackChannelId &&
@@ -102,6 +108,7 @@ module.exports = async function(context, req) {
     let users = [];
     let customEmoji = [];
 
+    // We cache custom emoji and user data in an Azure CosmosDB database
     const data = context.bindings.cachedData[0];
 
     if (
@@ -109,7 +116,8 @@ module.exports = async function(context, req) {
       data.customEmoji &&
       data.users &&
       data.timestamp &&
-      new Date() - new Date(data.timestamp) <= 1000 * 60 /* 1 minute */
+      new Date() - new Date(data.timestamp) <=
+        1000 * 60 /* Cache time = 1 minute */
     ) {
       users = data.users;
       customEmoji = data.customEmoji;
@@ -118,18 +126,20 @@ module.exports = async function(context, req) {
       customEmoji = await fetchEmojis();
       context.bindings.newData = {
         timestamp: new Date().toISOString(),
-        id: "1", // loool
+        id: "1", // Hah. We need an ID in the database, so this works.
         users,
         customEmoji
       };
     }
 
+    // Grab the user's name
     const user = users.find(u => u.id === event.user);
     if (user) {
       response.username = user.name;
       response.user = user.real_name;
     }
 
+    // Try to replace Slack-style :emoji: with either Unicode code points or custom emoji URLs
     if (event.text !== "") {
       let text = event.text;
       text = replaceEmoji(text);
@@ -137,6 +147,7 @@ module.exports = async function(context, req) {
       response.text = text;
     }
 
+    // Grab out gif data if it exists in the Slack metadata
     if (event.attachments && event.attachments[0]) {
       const giphy = event.attachments[0];
 
