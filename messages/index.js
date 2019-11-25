@@ -49,7 +49,17 @@ const replaceEmoji = (message) => {
 
 const replaceCustomEmoji = (message, emojiMap) => {
   return message.replace(/\:(.*?)\:/g, (original, name) => {
-    const url = emojiMap[name]
+    let url = emojiMap[name];
+    if (!url) {
+      return;
+    }
+
+    // Resolve aliases
+    while (url.match(/^alias:(.*?)$/) !== null) {
+      const [_, alias] = url.match(/^alias:(.*?)$/);
+      url = emojiMap[alias];
+    }
+
     if (url) {
       return `<img class='slack-emoji' src="${url}"/>`
     } else {
