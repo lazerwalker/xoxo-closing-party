@@ -3,49 +3,50 @@
 const fetch = require("node-fetch");
 
 const fetchUsers = async (existing, cursor) => {
-  let users = existing || []
+  let users = existing || [];
 
-  let url = `https://slack.com/api/users.list?token=${process.env.SlackAccessToken}`
+  let url = `https://slack.com/api/users.list?token=${process.env.SlackAccessToken}`;
   if (cursor) {
-    url += `&cursor=${cursor}`
+    url += `&cursor=${cursor}`;
   }
 
-  const response = await fetch(url).then(response => response.json())
+  const response = await fetch(url).then(response => response.json());
 
   const newUsers = (response.members || []).map(u => {
     return {
       id: u.id,
       name: u.name,
       real_name: u.real_name
-    }
-  })
+    };
+  });
 
-  users = users.concat(newUsers)
+  users = users.concat(newUsers);
 
   if (response.response_metadata && response.response_metadata.next_cursor) {
-    return await fetchUsers(users, response.response_metadata.next_cursor)
+    return await fetchUsers(users, response.response_metadata.next_cursor);
   } else {
-    return users
+    return users;
   }
-}
+};
 
 const fetchEmojis = async () => {
   return await fetch(
-      `https://slack.com/api/emoji.list?token=${process.env.SlackAccessToken}`
-    ).then(response => response.json())
-    .then(response => response.emoji || [])
-}
+    `https://slack.com/api/emoji.list?token=${process.env.SlackAccessToken}`
+  )
+    .then(response => response.json())
+    .then(response => response.emoji || []);
+};
 
-const replaceEmoji = (message) => {
-  const standardEmojiMap = require('./emoji')
+const replaceEmoji = message => {
+  const standardEmojiMap = require("./emoji");
   return message.replace(/\:(.*?)\:/g, (original, name) => {
     if (standardEmojiMap[name]) {
-      return String.fromCodePoint(standardEmojiMap[name])
+      return String.fromCodePoint(standardEmojiMap[name]);
     } else {
-      return original
+      return original;
     }
-  })
-}
+  });
+};
 
 const replaceCustomEmoji = (message, emojiMap) => {
   return message.replace(/\:(.*?)\:/g, (original, name) => {
@@ -61,15 +62,14 @@ const replaceCustomEmoji = (message, emojiMap) => {
     }
 
     if (url) {
-      return `<img class='slack-emoji' src="${url}"/>`
+      return `<img class='slack-emoji' src="${url}"/>`;
     } else {
-      return original
+      return original;
     }
-  })
+  });
+};
 
-}
-
-module.exports = async function (context, req) {
+module.exports = async function(context, req) {
   const payload = req.body;
   if (payload.type === "url_verification") {
     // WARNING: Here, and with all requests, we _should_ be verifying the signature of the request
@@ -91,34 +91,37 @@ module.exports = async function (context, req) {
     event &&
     event.channel === process.env.SlackChannelId &&
     event.type === "message" &&
-    event.subtype !== "message_deleted"
+    event.subtype !== "message_deleted" &&
+    event.subtype !== "channel_join"
   ) {
     let response = {
       timestamp: event.ts,
-      user: event.user
+      user: " "
     };
 
-    let users = []
-    let customEmoji = []
+    let users = [];
+    let customEmoji = [];
 
-    const data = context.bindings.cachedData[0]
+    const data = context.bindings.cachedData[0];
 
-    if (data &&
+    if (
+      data &&
       data.customEmoji &&
       data.users &&
       data.timestamp &&
-      new Date() - new Date(data.timestamp) <= 1000 * 60 /* 1 minute */ ) {
-      users = data.users
-      customEmoji = data.customEmoji
+      new Date() - new Date(data.timestamp) <= 1000 * 60 /* 1 minute */
+    ) {
+      users = data.users;
+      customEmoji = data.customEmoji;
     } else {
-      users = await fetchUsers()
-      customEmoji = await fetchEmojis()
+      users = await fetchUsers();
+      customEmoji = await fetchEmojis();
       context.bindings.newData = {
-        timestamp: (new Date()).toISOString(),
+        timestamp: new Date().toISOString(),
         id: "1", // loool
         users,
         customEmoji
-      }
+      };
     }
 
     const user = users.find(u => u.id === event.user);
@@ -128,10 +131,10 @@ module.exports = async function (context, req) {
     }
 
     if (event.text !== "") {
-      let text = event.text
-      text = replaceEmoji(text)
-      text = replaceCustomEmoji(text, customEmoji)
-      response.text = text
+      let text = event.text;
+      text = replaceEmoji(text);
+      text = replaceCustomEmoji(text, customEmoji);
+      response.text = text;
     }
 
     if (event.attachments && event.attachments[0]) {
