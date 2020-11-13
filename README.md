@@ -6,7 +6,7 @@ This is the server backend for the GIF wall installation at the [XOXO 2019](http
 
 For more info about it, check out [this blog post](https://dev.to/lazerwalker/making-a-weird-gif-wall-using-azure-functions-and-signalr-2gmm).
 
-It's written in JavaScript/NodeJS. It uses [Azure Functions](https://azure.microsoft.com/en-us/services/functions/) and the [Azure SignalR service](https://azure.microsoft.com/en-us/services/signalr-service/?WT.mc_id=devto-blog-emwalker) connected to a Slack app and a [browser app](https://github.com/reedkavner/gif-viz).
+It's written in JavaScript/NodeJS. It uses [Azure Functions](https://azure.microsoft.com/services/functions/?WT.mc_id=iot-0000-emwalker) and the [Azure SignalR service](https://azure.microsoft.com/services/signalr-service/?WT.mc_id=iot-0000-emwalker) connected to a Slack app and a [browser app](https://github.com/reedkavner/gif-viz).
 
 ## License
 
